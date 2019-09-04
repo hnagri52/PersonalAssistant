@@ -92,7 +92,7 @@ def main():
             webbrowser.open("https://www.google.ca")
         elif "open facebook" in voice_command or "open facebook.com" in voice_command:
             webbrowser.open("https://www.facebook.com")
-        elif "play music" in voice_command:
+        elif "play music" in voice_command or "put on a song" in voice_command:
             mus_dir = os.chdir(r"/Users/husseinnagri/Music/iTunes/iTunes Media/Music/Unknown Artist/Unknown Album")
             songs = os.listdir(mus_dir)
             print(songs)
@@ -109,6 +109,9 @@ def main():
 
         elif "open code" in voice_command:
             os.system("open -a /Applications/Xcode.app ")
+
+        elif "what is your name" in voice_command:
+            speak("My name is Jarvis! I will be your personal assistant.")
         elif "send email" in voice_command:
             try:
                 speak("What should I say? ")
