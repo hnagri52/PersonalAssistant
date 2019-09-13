@@ -1,5 +1,5 @@
 from __future__ import print_function
-import datetime
+import datetime as dt
 import pickle
 import os.path
 from googleapiclient.discovery import build
@@ -7,13 +7,13 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 import os
 import speech_recognition as sr
-import datetime as dt
 import pyttsx3
 import wikipedia
 import webbrowser
 import pygame
 import random
 import smtplib
+import pytz
 
 #setup the speaking assistant
 engine = pyttsx3.init("nsss")
@@ -27,6 +27,7 @@ SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 MONTHS = ["january", "february", "march", "april", "may", "june","july", "august", "september","october", "november", "december"]
 DAY_EXTENTIONS = ["rd", "th", "st", "nd"]
+CALENDAR_STRS = ["what do i have", "do i have plans", "am i busy", "what's happening on", "do i have anything"]
 
 def speak(audio):
     """Will relay a message back to the user"""
@@ -113,21 +114,36 @@ def authenticate_google():
 
     return service
 
-def get_events(amount, service):
+def get_events(day, service):
     # Call the Calendar API
-    now = datetime.datetime.utcnow().isoformat() + 'Z' # 'Z' indicates UTC time
-    print(f'Getting the upcoming {amount} events')
-    events_result = service.events().list(calendarId='primary', timeMin=now,
-                                        maxResults=amount, singleEvents=True,
-                                        orderBy='startTime').execute()
+
+    date = dt.datetime.combine(day, dt.datetime.min.time())
+    end_date = dt.datetime.combine(day, dt.datetime.max.time())
+    utc = pytz.UTC
+    date = date.astimezone(utc)
+    end_date = end_date.astimezone(utc)
+
+
+    events_result = service.events().list(calendarId='primary', timeMin=date.isoformat(),
+                                          timeMax = end_date.isoformat(), singleEvents=True,
+                                          orderBy='startTime').execute()
     events = events_result.get('items', [])
 
     if not events:
-        print('No upcoming events found.')
-    for event in events:
-        start = event['start'].get('dateTime', event['start'].get('date'))
-        print(start, event['summary'])
+        speak('No upcoming events found.')
+    else:
+        speak(f"You have {len(events)} events on this day!")
+        for event in events:
+            start = event['start'].get('dateTime', event['start'].get('date'))
+            print(start, event['summary'])
+            start_time = str(start.split("T")[1].split("-")[0])
+            if(int(start_time.split(":")[0]) < 12):
+                start_time = start_time + "am"
+            else:
+                start_time = str(int(start_time.split(":")[0]) -12)
+                start_time = start_time + "pm"
 
+            speak(event["summary"] + "at" + start_time)
 
 def get_date(text):
     text = text.lower()
@@ -173,18 +189,19 @@ def get_date(text):
             if text.count("next") >=1:
                 dif +=7
         return today + dt.timedelta(dif)
+    if day == -1 or month == -1:
+        return None
 
     return dt.date(month=month, day=day, year=year)
 
 
 
 
-def run():
-    service = authenticate_google()
-    #get_events(2, service)
+def main():
     wishMe()
 
     while True:
+        service = authenticate_google()
         voice_command = takeCommand().lower()
         print(f"lower case: {voice_command}")
         if "wikipedia" == voice_command:
@@ -231,12 +248,21 @@ def run():
             except Exception as e:
                 print(e)
                 speak("Sorry, the email could not be sent!")
+        for phrase in CALENDAR_STRS:
+            if phrase in voice_command:
+                date = get_date(voice_command)
+                if date:
+                    get_events(date, service)
+                else:
+                    speak("I didn't catch that! Please try again!")
 
 
 
 
 
 if __name__ == '__main__':
-    #main()
-    text = takeCommand().lower()
-    print(get_date(text))
+    main()
+
+
+ #   text = takeCommand().lower()
+  #  print(get_date(text))
