@@ -249,7 +249,7 @@ def main():
                 print(e)
                 speak("Sorry, the email could not be sent!")
         for phrase in CALENDAR_STRS:
-            if phrase in voice_command:
+            if phrase in voice_command.lower():
                 date = get_date(voice_command)
                 if date:
                     get_events(date, service)
